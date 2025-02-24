@@ -1,2 +1,0 @@
-import telegram
-import asyncio
