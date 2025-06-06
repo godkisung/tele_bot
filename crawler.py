@@ -60,7 +60,7 @@ async def main():
         new_hashes.append(message_hash)
         
         try:
-            await bot.send_message(chat_id="1002620600455", text=combined)
+            await bot.send_message(chat_id="-1002620600455", text=combined)
         except telegram.error.TimedOut:
             print("Timeout occurred. Retrying...")
             # 재시도 로직 추가
