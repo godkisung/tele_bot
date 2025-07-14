@@ -46,12 +46,12 @@ jobs:
 
       # 5. 크롤러 파이썬 스크립트 실행
       - name: Run crawler script
-        # env 키워드를 사용해 GitHub Secrets 값을 환경 변수로 주입
-        # 파이썬 코드는 이 환경 변수를 읽어서 사용하게 됩니다.
+        # env 키워드를 사용해 GitHub Secrets 값을 환경 변수로 주입합니다.
         env:
           TELEGRAM_API_KEY: ${{ secrets.TELEGRAM_API_KEY }}
           TELEGRAM_CHANNEL_ID_CRAWLER: ${{ secrets.CHAT_ID }}
           SEEN_NOTICE_FILE: ID.txt
+          KNOU_URL: "https://www.knou.ac.kr/notice" # knou_crawler.py가 사용할 URL 변수 추가
         run: python crawler.py
 
       # 6. 변경된 ID.txt 파일을 리포지토리에 다시 커밋하고 푸시
