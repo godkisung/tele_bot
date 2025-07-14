@@ -19,11 +19,8 @@ def get_page_content(url):
     """URL을 입력받아, 웹 페이지의 본문 텍스트만 추출하여 반환하는 함수"""
     print(f"페이지 내용 추출 시도: {url}")
     try:
-        # 오류 수정: 변수 이름을 'url'로 통일
         response = requests.get(url, headers={'User-Agent': 'Mozilla/5.0'}, timeout=30)
         response.raise_for_status()
-
-        # 오류 수정: 파서 이름을 'lxml'로 수정
         soup = bs4.BeautifulSoup(response.text, 'lxml')
         content_area = soup.select_one('#bo_v_con')
 
@@ -38,7 +35,7 @@ def get_page_content(url):
         return None
 
 def summarize_text_with_hf(text_to_summarize):
-    """Hugging Face API를 이용해 텍스트를 요약하는 함수 (안정성 강화)"""
+    """Hugging Face API를 이용해 텍스트를 요약하는 함수"""
     if not text_to_summarize or len(text_to_summarize.strip()) < 50:
         return "요약할 내용이 충분하지 않습니다."
 
@@ -100,17 +97,28 @@ async def fetch_and_send_news(channel_id):
 
     print("2. 목록 페이지 HTML을 파싱합니다...")
     soup = bs4.BeautifulSoup(response.text, "html.parser")
-    links = soup.select("td.td-subject > a")
     
-    # --- ▼ 진단 코드 1 ▼ ---
+    # 웹사이트 구조 변경에 유연하게 대응하기 위해 여러 CSS 선택자를 순서대로 시도합니다.
+    possible_selectors = [
+        "td.title > a",       # 가장 가능성이 높은 새로운 선택자
+        "td.td-subject > a",  # 이전에 사용했던 선택자
+        "td.al-l > a",        # 일반적인 좌측 정렬 클래스
+        "td.left > a"         # 또 다른 일반적인 좌측 정렬 클래스
+    ]
+    
+    links = []
+    for selector in possible_selectors:
+        links = soup.select(selector)
+        if links: # 링크 목록을 성공적으로 찾으면
+            print(f"-> 성공! '{selector}' 선택자를 사용해 링크를 찾았습니다.")
+            break # 더 이상 다른 선택자를 시도하지 않고 루프를 중단합니다.
+    
     print(f"3. 발견된 게시물 링크 수: {len(links)}개")
-    # --- ▲ 진단 코드 1 ▲ ---
+    if not links:
+        print("-> 게시물 링크를 찾지 못했습니다. 모든 예상 선택자가 실패했습니다.")
 
     seen_hashes = get_seen_hashes()
     new_hashes = []
-
-    if not links:
-        print("-> 게시물 링크를 찾지 못했습니다. CSS 선택자('td.td-subject > a')가 올바른지 확인하세요.")
 
     for link_element in reversed(links): 
         parent_tr = link_element.find_parent("tr")
@@ -126,9 +134,7 @@ async def fetch_and_send_news(channel_id):
         if not link or not title:
             continue
         
-        # --- ▼ 진단 코드 2 ▼ ---
         print(f"\n4. 처리 중인 게시물: {title}")
-        # --- ▲ 진단 코드 2 ▲ ---
 
         title_hash = message_to_hash(title)
         if title_hash in seen_hashes:
@@ -159,10 +165,7 @@ async def fetch_and_send_news(channel_id):
         except telegram.error.TelegramError as e:
             print(f"-> 텔레그램 메시지 전송 실패: {e}")
 
-    # --- ▼ 진단 코드 3 ▼ ---
     print("\n6. 게시물 루프 처리가 모두 완료되었습니다.")
-    # --- ▲ 진단 코드 3 ▲ ---
-
     if new_hashes:
         add_seen_hashes(new_hashes)
         print(f"-> {len(new_hashes)}개의 새 해시를 ID.txt에 저장했습니다.")
