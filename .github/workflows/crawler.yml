@@ -32,9 +32,11 @@ jobs:
       - name: Create .env file
         run: |
           mkdir -p teleapi_key
-          echo "tele_api=${{ secrets.TELEGRAM_API_KEY }}" > teleapi_key/.env
-          echo "KNOU_URL=${{ secrets.KNOU_URL }}" >> teleapi_key/.env
-          echo "TELEGRAM_CHANNEL_ID_CRAWLER=${{ secrets.TELEGRAM_CHANNEL_ID_CRAWLER }}" >> teleapi_key/.env
+          echo "TELE_API=${{ secrets.TELE_API }}" > teleapi_key/.env
+          echo "TELEGRAM_API_KEY=${{ secrets.TELEGRAM_API_KEY }}" >> teleapi_key/.env
+          echo "CHAT_ID=${{ secrets.CHAT_ID }}" >> teleapi_key/.env
+          echo "KNOU_URL=https://www.knou.ac.kr/notice" >> teleapi_key/.env
+          echo "TELEGRAM_CHANNEL_ID_CRAWLER=${{ secrets.CHAT_ID }}" >> teleapi_key/.env
           echo "SEEN_NOTICE_FILE=ID.txt" >> teleapi_key/.env
 
       - name: Run crawler script
