@@ -2,8 +2,8 @@ name: Run Crawler Every 4 Hours
 
 on:
   schedule:
-    - cron: '0 */4 * * *'  # 4시간마다 실행
-  workflow_dispatch:  # 수동 실행 옵션
+    - cron: '0 */4 * * *'
+  workflow_dispatch:
 
 permissions:
   contents: write
@@ -16,36 +16,37 @@ jobs:
         uses: actions/checkout@v3
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          fetch-depth: 0  # 깊이 있는 체크아웃
+          fetch-depth: 0
 
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
           python-version: '3.10'
-          
+
       - name: Install dependencies
         run: pip install -r requirements.txt
-        
+
       - name: Create ID.txt if not exists
         run: touch ID.txt
-        
-      - name: Create .env file
-        run: |
-          mkdir -p teleapi_key
-          echo "TELE_API=${{ secrets.TELE_API }}" > teleapi_key/.env
-          echo "TELEGRAM_API_KEY=${{ secrets.TELEGRAM_API_KEY }}" >> teleapi_key/.env
-          echo "CHAT_ID=${{ secrets.CHAT_ID }}" >> teleapi_key/.env
-          echo "KNOU_URL=https://www.knou.ac.kr/notice" >> teleapi_key/.env
-          echo "TELEGRAM_CHANNEL_ID_CRAWLER=${{ secrets.CHAT_ID }}" >> teleapi_key/.env
-          echo "SEEN_NOTICE_FILE=ID.txt" >> teleapi_key/.env
 
+      # ----------------- 이 부분이 핵심입니다 -----------------
       - name: Run crawler script
+        # .env 파일을 만드는 대신, env 키워드로 직접 환경 변수를 주입합니다.
+        env:
+          TELEGRAM_API_KEY: ${{ secrets.TELEGRAM_API_KEY }}
+          TELEGRAM_CHANNEL_ID_CRAWLER: ${{ secrets.CHAT_ID }}
+          SEEN_NOTICE_FILE: ID.txt
+          # 파이썬 코드에서 사용하는 다른 환경 변수들도 여기에 추가하세요.
         run: python crawler.py
-        
+      # ----------------------------------------------------
+
       - name: Commit and push ID.txt changes
         run: |
           git config --local user.name 'github-actions[bot]'
           git config --local user.email 'github-actions[bot]@users.noreply.github.com'
           git add ID.txt
-          git diff --quiet && git diff --staged --quiet || git commit -m "Update ID.txt with new hashes"
-          git push
+          # 변경 사항이 있을 때만 커밋하도록 수정
+          if ! git diff --staged --quiet; then
+            git commit -m "Update seen notices"
+            git push
+          fi
