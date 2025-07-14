@@ -89,11 +89,28 @@ async def fetch_and_send_news(channel_id):
         return
 
     bot = telegram.Bot(TELEGRAM_API_KEY)
-    response = requests.get(KNOU_URL)
+    
+    print("1. 공지사항 목록 페이지에 접속합니다...")
+    try:
+        response = requests.get(KNOU_URL)
+        response.raise_for_status()
+    except requests.exceptions.RequestException as e:
+        print(f"웹사이트에 연결할 수 없습니다: {e}")
+        return
+
+    print("2. 목록 페이지 HTML을 파싱합니다...")
     soup = bs4.BeautifulSoup(response.text, "html.parser")
     links = soup.select("td.td-subject > a")
+    
+    # --- ▼ 진단 코드 1 ▼ ---
+    print(f"3. 발견된 게시물 링크 수: {len(links)}개")
+    # --- ▲ 진단 코드 1 ▲ ---
+
     seen_hashes = get_seen_hashes()
     new_hashes = []
+
+    if not links:
+        print("-> 게시물 링크를 찾지 못했습니다. CSS 선택자('td.td-subject > a')가 올바른지 확인하세요.")
 
     for link_element in reversed(links): 
         parent_tr = link_element.find_parent("tr")
@@ -108,39 +125,46 @@ async def fetch_and_send_news(channel_id):
         title = link_element.text.strip().replace("\n", "").replace("  ", " ")
         if not link or not title:
             continue
+        
+        # --- ▼ 진단 코드 2 ▼ ---
+        print(f"\n4. 처리 중인 게시물: {title}")
+        # --- ▲ 진단 코드 2 ▲ ---
 
-        # 오류 수정: 해시 기준을 '제목'으로 변경하여 중복 전송 방지
         title_hash = message_to_hash(title)
         if title_hash in seen_hashes:
+            print("-> 이미 보낸 게시물입니다. 건너뜁니다.")
             continue
 
+        print("-> 새로운 게시물입니다. 요약을 시작합니다.")
         full_link = f"https://www.knou.ac.kr{link}"
         
         content = get_page_content(full_link)
         
-        # 안정성 강화: content가 None이 아닐 경우에만 요약 진행
         if content:
             summary = summarize_text_with_hf(content)
         else:
             summary = "본문 내용을 가져올 수 없어 요약에 실패했습니다."
         
-        # 오류 수정: 메시지 포맷을 깔끔하게 정리하고 링크 중복 제거
         message = (
             f"📌 **{title}**\n\n"
             f"📝 **내용 요약:**\n{summary}\n\n"
             f"🔗 **원문 링크:**\n{full_link}"
         )
         
-        print(f"전송할 메시지 준비 완료: {title}")
+        print("5. 텔레그램 메시지 전송을 시도합니다...")
         try:
-            # 오류 수정: parse_mode='Markdown' 추가하여 서식 적용
             await bot.send_message(chat_id=channel_id, text=message, parse_mode='Markdown')
+            print("-> 메시지 전송 성공!")
             new_hashes.append(title_hash)
         except telegram.error.TelegramError as e:
-            print(f"텔레그램 메시지 전송 실패: {e}")
+            print(f"-> 텔레그램 메시지 전송 실패: {e}")
+
+    # --- ▼ 진단 코드 3 ▼ ---
+    print("\n6. 게시물 루프 처리가 모두 완료되었습니다.")
+    # --- ▲ 진단 코드 3 ▲ ---
 
     if new_hashes:
         add_seen_hashes(new_hashes)
-        print(f"{len(new_hashes)}개의 새 공지를 전송했습니다.")
+        print(f"-> {len(new_hashes)}개의 새 해시를 ID.txt에 저장했습니다.")
     else:
-        print("새로운 공지가 없습니다.")
+        print("-> 새로 보낸 메시지가 없어 ID.txt를 업데이트하지 않습니다.")
