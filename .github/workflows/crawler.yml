@@ -49,6 +49,7 @@ jobs:
         # env 키워드를 사용해 GitHub Secrets 값을 환경 변수로 주입합니다.
         env:
           TELEGRAM_API_KEY: ${{ secrets.TELEGRAM_API_KEY }}
+          HF_TOKEN: ${{ secrets.HF_TOKEN }} 
           TELEGRAM_CHANNEL_ID_CRAWLER: ${{ secrets.CHAT_ID }}
           SEEN_NOTICE_FILE: ID.txt
           KNOU_URL: "https://www.knou.ac.kr/notice" # knou_crawler.py가 사용할 URL 변수 추가
