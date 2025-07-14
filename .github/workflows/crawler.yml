@@ -31,6 +31,7 @@ jobs:
         
       - name: Create .env file
         run: |
+          mkdir -p teleapi_key
           echo "tele_api=${{ secrets.TELEGRAM_API_KEY }}" > teleapi_key/.env
           echo "KNOU_URL=${{ secrets.KNOU_URL }}" >> teleapi_key/.env
           echo "TELEGRAM_CHANNEL_ID_CRAWLER=${{ secrets.TELEGRAM_CHANNEL_ID_CRAWLER }}" >> teleapi_key/.env
