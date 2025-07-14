@@ -52,7 +52,7 @@ jobs:
           HF_TOKEN: ${{ secrets.HF_TOKEN }} 
           TELEGRAM_CHANNEL_ID_CRAWLER: ${{ secrets.CHAT_ID }}
           SEEN_NOTICE_FILE: ID.txt
-          KNOU_URL: "https://www.knou.ac.kr/notice" # knou_crawler.py가 사용할 URL 변수 추가
+          KNOU_URL: "https://www.knou.ac.kr/knou/561/subview.do" # knou_crawler.py가 사용할 URL 변수 추가
         run: python crawler.py
 
       # 6. 변경된 ID.txt 파일을 리포지토리에 다시 커밋하고 푸시

@@ -10,6 +10,8 @@ import sys
 
 # --- 환경 변수 읽기 ---
 TELEGRAM_API_KEY = os.environ.get("TELEGRAM_API_KEY")
+# 중요: GitHub Actions의 yml 파일에서 KNOU_URL 값을 새 주소로 변경해야 합니다.
+# https://www.knou.ac.kr/knou/561/subview.do
 KNOU_URL = os.environ.get("KNOU_URL")
 SEEN_NOTICE_FILE = os.environ.get("SEEN_NOTICE_FILE")
 HF_TOKEN = os.environ.get("HF_TOKEN")
@@ -22,12 +24,14 @@ def get_page_content(url):
         response = requests.get(url, headers={'User-Agent': 'Mozilla/5.0'}, timeout=30)
         response.raise_for_status()
         soup = bs4.BeautifulSoup(response.text, 'lxml')
-        content_area = soup.select_one('#bo_v_con')
+        
+        # 변경된 사이트 구조에 맞춰 본문 선택자를 수정합니다.
+        content_area = soup.select_one('.board_view_content')
 
         if content_area:
             return content_area.get_text(separator="\n", strip=True)
         else:
-            print("오류: 본문 영역('#bo_v_con')을 찾을 수 없습니다.")
+            print("오류: 본문 영역('.board_view_content')을 찾을 수 없습니다.")
             return None
             
     except requests.exceptions.RequestException as e:
@@ -98,29 +102,12 @@ async def fetch_and_send_news(channel_id):
     print("2. 목록 페이지 HTML을 파싱합니다...")
     soup = bs4.BeautifulSoup(response.text, "html.parser")
     
-    # 웹사이트 구조 변경에 유연하게 대응하기 위해 여러 CSS 선택자를 순서대로 시도합니다.
-    # 자식 선택자(>) 대신 자손 선택자(공백)를 사용하여 더 유연하게 검색하도록 수정했습니다.
-    possible_selectors = [
-        "td.title a",           # 'title' 클래스를 가진 td의 모든 자손 a 태그
-        "td.subject a",         # 'subject' 클래스를 가진 td의 모든 자손 a 태그
-        "td.td-subject a",      # 'td-subject' 클래스를 가진 td의 모든 자손 a 태그
-        ".board-list td.subject a", # 좀 더 구체적인 경로 탐색
-        "div.board-list-content td.text-left a" # 다른 흔한 게시판 구조
-    ]
+    # 변경된 사이트 구조에 맞춰 게시물 링크 선택자를 수정합니다.
+    links = soup.select("td.subject > a")
     
-    links = []
-    found_selector = None
-    for selector in possible_selectors:
-        links = soup.select(selector)
-        if links: # 링크 목록을 성공적으로 찾으면
-            found_selector = selector
-            break # 더 이상 다른 선택자를 시도하지 않고 루프를 중단합니다.
-    
-    if found_selector:
-        print(f"-> 성공! '{found_selector}' 선택자를 사용해 {len(links)}개의 링크를 찾았습니다.")
-    else:
-        print(f"-> 실패: {len(links)}개의 링크를 찾았습니다. 모든 예상 선택자가 실패했습니다.")
-
+    print(f"3. 발견된 게시물 링크 수: {len(links)}개")
+    if not links:
+        print("-> 게시물 링크를 찾지 못했습니다. CSS 선택자('td.subject > a')를 확인하세요.")
 
     seen_hashes = get_seen_hashes()
     new_hashes = []
@@ -130,12 +117,10 @@ async def fetch_and_send_news(channel_id):
         if "notice" in parent_tr.get("class", []):
             continue
 
-        span_element = link_element.select_one("span")
-        if span_element:
-            span_element.extract()
-
+        # strong 태그 등 다른 태그가 있을 수 있으므로 text 속성으로 직접 가져옵니다.
+        title = link_element.text.strip()
         link = link_element.get("href")
-        title = link_element.text.strip().replace("\n", "").replace("  ", " ")
+        
         if not link or not title:
             continue
         
@@ -147,6 +132,7 @@ async def fetch_and_send_news(channel_id):
             continue
 
         print("-> 새로운 게시물입니다. 요약을 시작합니다.")
+        # 링크가 전체 주소가 아닐 수 있으므로, 도메인을 붙여줍니다.
         full_link = f"https://www.knou.ac.kr{link}"
         
         content = get_page_content(full_link)
