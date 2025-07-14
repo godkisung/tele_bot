@@ -99,23 +99,28 @@ async def fetch_and_send_news(channel_id):
     soup = bs4.BeautifulSoup(response.text, "html.parser")
     
     # 웹사이트 구조 변경에 유연하게 대응하기 위해 여러 CSS 선택자를 순서대로 시도합니다.
+    # 자식 선택자(>) 대신 자손 선택자(공백)를 사용하여 더 유연하게 검색하도록 수정했습니다.
     possible_selectors = [
-        "td.title > a",       # 가장 가능성이 높은 새로운 선택자
-        "td.td-subject > a",  # 이전에 사용했던 선택자
-        "td.al-l > a",        # 일반적인 좌측 정렬 클래스
-        "td.left > a"         # 또 다른 일반적인 좌측 정렬 클래스
+        "td.title a",           # 'title' 클래스를 가진 td의 모든 자손 a 태그
+        "td.subject a",         # 'subject' 클래스를 가진 td의 모든 자손 a 태그
+        "td.td-subject a",      # 'td-subject' 클래스를 가진 td의 모든 자손 a 태그
+        ".board-list td.subject a", # 좀 더 구체적인 경로 탐색
+        "div.board-list-content td.text-left a" # 다른 흔한 게시판 구조
     ]
     
     links = []
+    found_selector = None
     for selector in possible_selectors:
         links = soup.select(selector)
         if links: # 링크 목록을 성공적으로 찾으면
-            print(f"-> 성공! '{selector}' 선택자를 사용해 링크를 찾았습니다.")
+            found_selector = selector
             break # 더 이상 다른 선택자를 시도하지 않고 루프를 중단합니다.
     
-    print(f"3. 발견된 게시물 링크 수: {len(links)}개")
-    if not links:
-        print("-> 게시물 링크를 찾지 못했습니다. 모든 예상 선택자가 실패했습니다.")
+    if found_selector:
+        print(f"-> 성공! '{found_selector}' 선택자를 사용해 {len(links)}개의 링크를 찾았습니다.")
+    else:
+        print(f"-> 실패: {len(links)}개의 링크를 찾았습니다. 모든 예상 선택자가 실패했습니다.")
+
 
     seen_hashes = get_seen_hashes()
     new_hashes = []
