@@ -11,9 +11,26 @@ def get_page_content(url):
         response = requests.get(url, headers={'User-Agent': 'Mozilla/5.0'}, timeout=30)
         response.raise_for_status()
         soup = bs4.BeautifulSoup(response.text, 'lxml')
-        content_area = soup.select_one('.view-content') or soup.select_one('.board_view_content')
+        
+        # 다양한 CSS 선택자를 순서대로 시도
+        selectors = [
+            '.view-content',
+            '.board_view_content',
+            '#board_view_content',
+            '.view_content',
+            '.view-con',
+            '#viewCont'
+        ]
+        
+        content_area = None
+        for selector in selectors:
+            content_area = soup.select_one(selector)
+            if content_area:
+                break
+        
         if content_area:
             return content_area.get_text(separator="\n", strip=True)
+            
         print("오류: 본문 영역을 찾을 수 없습니다.")
         return None
     except requests.exceptions.RequestException as e:
