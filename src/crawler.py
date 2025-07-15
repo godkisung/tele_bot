@@ -50,6 +50,7 @@ async def fetch_and_process_news(api_url, seen_file, hf_token):
     print("2. API 응답 HTML을 파싱합니다...")
     soup = bs4.BeautifulSoup(response.text, "html.parser")
     links = soup.select("td.td-subject > a")
+    print(len(soup))
     
     print(f"3. 발견된 게시물 링크 수: {len(links)}개")
     if not links:
