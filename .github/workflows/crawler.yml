@@ -1,71 +1,79 @@
 # 워크플로우의 이름
-name: Run Crawler Every 4 Hours
+name: Run Crawler and Lint
 
 # 워크플로우가 실행될 조건
 on:
   schedule:
-    # cron 스케줄 표현식: 4시간마다 0분에 실행 (예: 00:00, 04:00, 08:00...)
+    # cron 스케줄 표현식: 4시간마다 0분에 실행
     - cron: '0 */4 * * *'
-  # GitHub Actions 탭에서 수동으로 워크플로우를 실행할 수 있게 함
+  # 수동으로 워크플로우를 실행할 수 있게 함
   workflow_dispatch:
+  # main 브랜치에 push될 때도 실행
+  push:
+    branches:
+      - main
 
-# 워크플로우에 필요한 권한 설정 (ID.txt 파일 커밋을 위해 쓰기 권한 부여)
+# 워크플로우에 필요한 권한 설정
 permissions:
   contents: write
 
 # 실행될 작업(job) 목록
 jobs:
-  run-crawler:
-    # 작업이 실행될 가상 환경 지정
+  lint:
+    name: Lint code
     runs-on: ubuntu-latest
-    
-    # 작업의 단계(step) 목록
     steps:
-      # 1. 리포지토리 코드 체크아웃
       - name: Checkout repository
         uses: actions/checkout@v4
-        with:
-          # git push를 위해 GITHUB_TOKEN 사용
-          token: ${{ secrets.GITHUB_TOKEN }}
-          # git commit 기록 전체를 가져와 push 충돌 방지
-          fetch-depth: 0
 
-      # 2. 파이썬 환경 설정
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.10'
 
-      # 3. 파이썬 의존성 패키지 설치
+      - name: Install linting dependencies
+        run: pip install ruff
+
+      - name: Run linter
+        run: ruff check .
+
+  run-crawler:
+    name: Run crawler
+    # lint 작업이 성공해야 실행됨
+    needs: lint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
       - name: Install dependencies
         run: pip install -r requirements.txt
 
-      # 4. 크롤러가 읽을 ID.txt 파일이 없을 경우 생성 (최초 실행 시 오류 방지)
       - name: Create ID.txt if not exists
         run: touch ID.txt
 
-      # 5. 크롤러 파이썬 스크립트 실행
       - name: Run crawler script
-        # env 키워드를 사용해 GitHub Secrets 값을 환경 변수로 주입합니다.
         env:
           TELEGRAM_API_KEY: ${{ secrets.TELEGRAM_API_KEY }}
-          HF_TOKEN: ${{ secrets.HF_TOKEN }} 
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
           TELEGRAM_CHANNEL_ID_CRAWLER: ${{ secrets.CHAT_ID }}
           SEEN_NOTICE_FILE: ID.txt
-          KNOU_URL: "https://www.knou.ac.kr/knou/561/subview.do" # knou_crawler.py가 사용할 URL 변수 추가
-        run: python crawler.py
+        # 변경된 파일 경로로 실행
+        run: python src/main.py
 
-      # 6. 변경된 ID.txt 파일을 리포지토리에 다시 커밋하고 푸시
       - name: Commit and push ID.txt changes
         run: |
-          # git 사용자 정보 설정
           git config --local user.name 'github-actions[bot]'
           git config --local user.email 'github-actions[bot]@users.noreply.github.com'
-          
-          # 변경된 ID.txt 파일을 git에 추가
           git add ID.txt
-          
-          # 파일에 변경 사항이 있을 경우에만 커밋 및 푸시 실행
           if ! git diff --staged --quiet; then
             git commit -m "Update seen notices (ID.txt)"
             git push
