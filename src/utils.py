@@ -35,7 +35,7 @@ def summarize_text_with_hf(text_to_summarize, hf_token):
     payload = {"inputs": text_to_summarize, "parameters": {"max_length": 256, "min_length": 30, "early_stopping": True}}
     
     try:
-        response = requests.post(API_URL, headers=headers, json=payload, timeout=90)
+        response = requests.post(API_URL, headers=headers, json=payload, timeout=300)
         if response.status_code == 200:
             return response.json()[0]['summary_text']
         else:
