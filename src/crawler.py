@@ -2,7 +2,6 @@
 
 import requests
 import bs4
-import hashlib
 from utils import get_seen_hashes, message_to_hash, summarize_text_with_hf
 
 def get_page_content(url):
