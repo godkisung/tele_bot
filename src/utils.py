@@ -24,6 +24,7 @@ def message_to_hash(message):
 
 def summarize_text_with_hf(text_to_summarize, hf_token):
     """Hugging Face API를 이용해 텍스트를 요약하는 함수"""
+    import time
     if not hf_token:
         return "(Hugging Face 토큰이 없어 요약을 건너뜁니다.)"
     if not text_to_summarize or len(text_to_summarize.strip()) < 50:
@@ -35,7 +36,12 @@ def summarize_text_with_hf(text_to_summarize, hf_token):
     payload = {"inputs": text_to_summarize, "parameters": {"max_length": 256, "min_length": 30, "early_stopping": True}}
     
     try:
+        start_time = time.time()
         response = requests.post(API_URL, headers=headers, json=payload, timeout=300)
+        end_time = time.time()
+        duration = end_time - start_time
+        print(f"Hugging Face API 요청 시간: {duration:.4f}초")
+
         if response.status_code == 200:
             return response.json()[0]['summary_text']
         else:
