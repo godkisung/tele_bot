@@ -33,7 +33,9 @@ def summarize_text_with_hf(text_to_summarize, hf_token):
     print("Hugging Face API로 요약 요청 중...")
     API_URL = "https://api-inference.huggingface.co/models/eenzeenee/t5-base-korean-summarization"
     headers = {"Authorization": f"Bearer {hf_token}"}
-    payload = {"inputs": text_to_summarize, "parameters": {"max_length": 256, "min_length": 30, "early_stopping": True}}
+    # 모델에게 날짜, 기간 등 중요한 정보를 포함하도록 지시하는 프롬프트 구성
+    prompt = f"다음 공지사항에서 가장 중요한 일정(날짜, 기간 등)을 반드시 포함하여 핵심 내용을 요약해줘:\n\n{text_to_summarize}"
+    payload = {"inputs": prompt, "parameters": {"max_length": 256, "min_length": 30, "early_stopping": True}}
     
     try:
         start_time = time.time()
